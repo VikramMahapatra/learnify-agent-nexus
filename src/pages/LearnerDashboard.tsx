@@ -41,6 +41,10 @@ const LearnerDashboard = () => {
     navigate('/login');
   };
 
+  const handleCourseAction = (courseId: number) => {
+    navigate(`/course/${courseId}`);
+  };
+
   const assignedCourses = [
     { 
       id: 1, 
@@ -232,9 +236,13 @@ const LearnerDashboard = () => {
                           <Badge variant="secondary">{course.difficulty}</Badge>
                           <Badge variant="outline">{course.category}</Badge>
                         </div>
-                        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-indigo-600 hover:bg-indigo-700"
+                          onClick={() => handleCourseAction(course.id)}
+                        >
                           <Play className="h-4 w-4 mr-1" />
-                          Continue
+                          {course.progress > 0 ? 'Continue' : 'Start'}
                         </Button>
                       </div>
                     </div>
