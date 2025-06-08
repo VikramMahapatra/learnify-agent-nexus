@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +40,10 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('skillforge_user');
     navigate('/login');
+  };
+
+  const handleCreateCourse = () => {
+    navigate('/create-course');
   };
 
   const dummyCourses = [
@@ -222,7 +225,10 @@ const AdminDashboard = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Course Management</h2>
               {user.adminRole === 'content-creator' && (
-                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                <Button 
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  onClick={handleCreateCourse}
+                >
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Create Course
                 </Button>
