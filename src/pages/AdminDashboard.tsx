@@ -11,6 +11,7 @@ import {
   CheckCircle, AlertCircle, Star 
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import ConfigureAgentsDialog from '@/components/ConfigureAgentsDialog';
 
 interface UserData {
   email: string;
@@ -19,8 +20,20 @@ interface UserData {
   name: string;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  originalName: string;
+  description: string;
+  active: boolean;
+  isAdded: boolean;
+  interactions?: number;
+  efficiency?: number;
+}
+
 const AdminDashboard = () => {
   const [user, setUser] = useState<UserData | null>(null);
+  const [systemAgents, setSystemAgents] = useState<Agent[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,7 +48,21 @@ const AdminDashboard = () => {
     } else {
       navigate('/login');
     }
+
+    // Load system agents
+    loadSystemAgents();
   }, [navigate]);
+
+  const loadSystemAgents = () => {
+    const savedAgents = localStorage.getItem('skillforge_system_agents');
+    if (savedAgents) {
+      setSystemAgents(JSON.parse(savedAgents));
+    }
+  };
+
+  const handleAgentsUpdate = (agents: Agent[]) => {
+    setSystemAgents(agents);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('skillforge_user');
@@ -56,15 +83,6 @@ const AdminDashboard = () => {
     { id: 1, name: 'John Doe', course: 'React Fundamentals', progress: 85, score: 92 },
     { id: 2, name: 'Jane Smith', course: 'Python for Data Science', progress: 60, score: 88 },
     { id: 3, name: 'Mike Johnson', course: 'UI/UX Design Principles', progress: 95, score: 95 },
-  ];
-
-  const agentStats = [
-    { name: 'Tutor Agent', active: true, interactions: 234, efficiency: 94 },
-    { name: 'Content Curator', active: true, interactions: 156, efficiency: 89 },
-    { name: 'Assessment Agent', active: true, interactions: 89, efficiency: 96 },
-    { name: 'Roleplay Agent', active: false, interactions: 45, efficiency: 87 },
-    { name: 'Skill Tracker', active: true, interactions: 178, efficiency: 91 },
-    { name: 'Memory Agent', active: true, interactions: 312, efficiency: 93 },
   ];
 
   if (!user) return null;
@@ -151,10 +169,10 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-100">Avg. Score</p>
-                  <p className="text-3xl font-bold">89</p>
+                  <p className="text-orange-100">Active Agents</p>
+                  <p className="text-3xl font-bold">{systemAgents.filter(agent => agent.active).length}</p>
                 </div>
-                <Award className="h-12 w-12 text-orange-200" />
+                <Brain className="h-12 w-12 text-orange-200" />
               </div>
             </CardContent>
           </Card>
@@ -204,14 +222,14 @@ const AdminDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {agentStats.slice(0, 4).map((agent, index) => (
-                      <div key={index} className="flex items-center justify-between">
+                    {systemAgents.slice(0, 4).map((agent) => (
+                      <div key={agent.id} className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className={`w-2 h-2 rounded-full mr-3 ${agent.active ? 'bg-green-500' : 'bg-gray-400'}`} />
                           <span className="text-sm font-medium">{agent.name}</span>
                         </div>
                         <Badge variant={agent.active ? 'default' : 'secondary'}>
-                          {agent.efficiency}% efficient
+                          {agent.efficiency || 90}% efficient
                         </Badge>
                       </div>
                     ))}
@@ -337,43 +355,62 @@ const AdminDashboard = () => {
           <TabsContent value="agents" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">AI Agent Management</h2>
-              <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Configure Agents
-              </Button>
+              <ConfigureAgentsDialog onAgentsUpdate={handleAgentsUpdate} />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {agentStats.map((agent, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
+              {systemAgents.map((agent) => (
+                <Card key={agent.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{agent.name}</CardTitle>
+                      <div className="flex flex-col">
+                        <CardTitle className="text-lg">{agent.name}</CardTitle>
+                        {agent.name !== agent.originalName && (
+                          <p className="text-sm text-muted-foreground">({agent.originalName})</p>
+                        )}
+                      </div>
                       <div className={`w-3 h-3 rounded-full ${agent.active ? 'bg-green-500' : 'bg-gray-400'}`} />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">{agent.description}</p>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Interactions</span>
-                        <span className="font-medium">{agent.interactions}</span>
+                        <span className="font-medium">{agent.interactions || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Efficiency</span>
-                        <span className="font-medium">{agent.efficiency}%</span>
+                        <span className="font-medium">{agent.efficiency || 90}%</span>
                       </div>
-                      <Progress value={agent.efficiency} className="h-2" />
-                      <Button 
-                        size="sm" 
-                        variant={agent.active ? 'destructive' : 'default'} 
-                        className="w-full"
+                      <Progress value={agent.efficiency || 90} className="h-2" />
+                      <Badge 
+                        variant={agent.active ? 'default' : 'secondary'}
+                        className="w-full justify-center"
                       >
-                        {agent.active ? 'Deactivate' : 'Activate'}
-                      </Button>
+                        {agent.active ? 'Active' : 'Inactive'}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+              
+              {systemAgents.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Agents Configured</h3>
+                  <p className="text-gray-500 mb-4">Get started by adding some AI agents to your system.</p>
+                  <ConfigureAgentsDialog 
+                    onAgentsUpdate={handleAgentsUpdate}
+                    trigger={
+                      <Button className="bg-indigo-600 hover:bg-indigo-700">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Your First Agent
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

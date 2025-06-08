@@ -1,426 +1,394 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Brain, Upload, FileText, Link2, Users, 
-  CheckCircle, Clock, ArrowLeft, Plus,
-  BookOpen, Target, Zap
+  Brain, ArrowLeft, Upload, Link, FileText, 
+  CheckCircle, PlayCircle, Zap, BookOpen,
+  Users, Settings, MessageSquare 
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+
+interface UserData {
+  email: string;
+  userType: string;
+  adminRole: string;
+  name: string;
+}
 
 interface Agent {
   id: string;
   name: string;
+  originalName: string;
   description: string;
-  icon: React.ComponentType<any>;
-  capabilities: string[];
-}
-
-interface CourseData {
-  title: string;
-  description: string;
-  selectedAgents: string[];
-  documents: File[];
-  driveLink: string;
-  prompt: string;
-  status: 'draft' | 'generating' | 'review' | 'completed';
-  modules: any[];
+  active: boolean;
+  isAdded: boolean;
 }
 
 const CreateCourse = () => {
-  const navigate = useNavigate();
+  const [user, setUser] = useState<UserData | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [courseData, setCourseData] = useState<CourseData>({
-    title: '',
-    description: '',
-    selectedAgents: [],
-    documents: [],
-    driveLink: '',
-    prompt: '',
-    status: 'draft',
-    modules: []
-  });
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [systemAgents, setSystemAgents] = useState<Agent[]>([]);
+  const [courseTitle, setCourseTitle] = useState('');
+  const [courseDescription, setCourseDescription] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [googleDriveLink, setGoogleDriveLink] = useState('');
+  const [agentPrompt, setAgentPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCourse, setGeneratedCourse] = useState<any>(null);
+  
+  const navigate = useNavigate();
 
-  const availableAgents: Agent[] = [
-    {
-      id: 'content-curator',
-      name: 'Content Curator Agent',
-      description: 'Converts documents into structured learning modules',
-      icon: BookOpen,
-      capabilities: ['Document Analysis', 'Content Structuring', 'Module Creation', 'Learning Path Design']
-    },
-    {
-      id: 'assessment-agent',
-      name: 'Assessment Agent',
-      description: 'Creates quizzes and role-specific evaluations',
-      icon: Target,
-      capabilities: ['Quiz Generation', 'Assessment Creation', 'Progress Evaluation', 'Skill Testing']
+  useEffect(() => {
+    const userData = localStorage.getItem('skillforge_user');
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      if (parsed.userType !== 'admin' || parsed.adminRole !== 'content-creator') {
+        navigate('/admin');
+      } else {
+        setUser(parsed);
+      }
+    } else {
+      navigate('/login');
     }
-  ];
 
-  const handleAgentToggle = (agentId: string) => {
-    setCourseData(prev => ({
-      ...prev,
-      selectedAgents: prev.selectedAgents.includes(agentId)
-        ? prev.selectedAgents.filter(id => id !== agentId)
-        : [...prev.selectedAgents, agentId]
-    }));
-  };
+    // Load system agents
+    const savedAgents = localStorage.getItem('skillforge_system_agents');
+    if (savedAgents) {
+      const agents = JSON.parse(savedAgents);
+      setSystemAgents(agents.filter((agent: Agent) => agent.active));
+    }
+  }, [navigate]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setCourseData(prev => ({
-      ...prev,
-      documents: [...prev.documents, ...files]
-    }));
+    setUploadedFiles(prev => [...prev, ...files]);
+    toast({
+      title: "Files uploaded",
+      description: `${files.length} file(s) added successfully.`,
+    });
   };
 
-  const removeDocument = (index: number) => {
-    setCourseData(prev => ({
-      ...prev,
-      documents: prev.documents.filter((_, i) => i !== index)
-    }));
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAgentSelection = (agentId: string) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
+  const canProceedToGeneration = () => {
+    return selectedAgents.length > 0 && 
+           courseTitle.trim() && 
+           courseDescription.trim() &&
+           agentPrompt.trim() &&
+           (uploadedFiles.length > 0 || googleDriveLink.trim());
   };
 
   const handleGenerateCourse = async () => {
-    if (!courseData.title || courseData.selectedAgents.length === 0) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a course title and select at least one agent.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!canProceedToGeneration()) return;
 
     setIsGenerating(true);
-    setCourseData(prev => ({ ...prev, status: 'generating' }));
-
-    // Simulate AI course generation
+    
+    // Simulate course generation
     setTimeout(() => {
       const mockCourse = {
-        id: Date.now().toString(),
-        title: courseData.title,
-        description: courseData.description,
+        title: courseTitle,
+        description: courseDescription,
         modules: [
           {
-            id: '1',
-            title: 'Introduction to ' + courseData.title,
-            duration: '45 mins',
-            content: 'Overview and fundamentals',
-            type: 'video'
+            id: 1,
+            title: "Introduction to " + courseTitle,
+            lessons: ["Overview", "Key Concepts", "Getting Started"],
+            duration: "2 hours"
           },
           {
-            id: '2',
-            title: 'Core Concepts',
-            duration: '60 mins',
-            content: 'Detailed exploration of key topics',
-            type: 'interactive'
+            id: 2,
+            title: "Core Principles",
+            lessons: ["Fundamentals", "Best Practices", "Common Patterns"],
+            duration: "3 hours"
           },
           {
-            id: '3',
-            title: 'Practical Applications',
-            duration: '90 mins',
-            content: 'Hands-on exercises and examples',
-            type: 'exercise'
+            id: 3,
+            title: "Advanced Topics",
+            lessons: ["Advanced Concepts", "Case Studies", "Real-world Applications"],
+            duration: "4 hours"
           }
         ],
-        estimatedDuration: '3.5 hours',
-        difficulty: 'Intermediate',
-        hasQuiz: courseData.selectedAgents.includes('assessment-agent')
+        totalDuration: "9 hours",
+        difficulty: "Intermediate",
+        prerequisites: ["Basic understanding of the subject"],
+        learningObjectives: [
+          "Understand core concepts",
+          "Apply knowledge in practical scenarios",
+          "Develop expertise in the field"
+        ]
       };
-
+      
       setGeneratedCourse(mockCourse);
-      setCourseData(prev => ({ ...prev, status: 'review' }));
       setIsGenerating(false);
       setCurrentStep(3);
-
+      
       toast({
-        title: "Course Generated Successfully!",
-        description: "Your course has been created and is ready for review.",
+        title: "Course Generated!",
+        description: "Your course has been successfully created by the AI agents.",
       });
     }, 3000);
   };
 
   const handleApproveCourse = () => {
-    setCourseData(prev => ({ ...prev, status: 'completed' }));
     toast({
       title: "Course Approved!",
-      description: "The course is now available for assignment to learners.",
+      description: "The course has been approved and is now available for assignment.",
     });
-    
-    // Store course in localStorage for demo
-    const existingCourses = JSON.parse(localStorage.getItem('skillforge_courses') || '[]');
-    existingCourses.push(generatedCourse);
-    localStorage.setItem('skillforge_courses', JSON.stringify(existingCourses));
-    
     navigate('/admin');
   };
 
   const handleAddQuiz = () => {
-    if (!courseData.selectedAgents.includes('assessment-agent')) {
-      toast({
-        title: "Assessment Agent Required",
-        description: "Please select the Assessment Agent to add quizzes.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     toast({
       title: "Quiz Generation Started",
       description: "Assessment Agent is creating quizzes for this course.",
     });
-
-    // Simulate quiz generation
-    setTimeout(() => {
-      setGeneratedCourse(prev => ({
-        ...prev,
-        quiz: {
-          questions: 10,
-          duration: '30 mins',
-          passingScore: 80
-        }
-      }));
-
-      toast({
-        title: "Quiz Added Successfully!",
-        description: "Assessment questions have been integrated into the course.",
-      });
-    }, 2000);
   };
+
+  if (!user) return null;
+
+  const relevantAgents = systemAgents.filter(agent => 
+    agent.id === 'content-curator' || agent.id === 'assessment-agent'
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex items-center h-16 space-x-4">
+            <Button variant="ghost" onClick={() => navigate('/admin')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
             <div className="flex items-center">
-              <Button variant="ghost" onClick={() => navigate('/admin')} className="mr-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
               <Brain className="h-8 w-8 text-indigo-600 mr-3" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Create New Course</h1>
-                <p className="text-sm text-gray-500">AI-powered course creation</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                {[1, 2, 3].map((step) => (
-                  <div
-                    key={step}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      step <= currentStep
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {step}
-                  </div>
-                ))}
+                <h1 className="text-xl font-bold text-gray-900">Create Course</h1>
+                <p className="text-sm text-gray-500">AI-Powered Course Generation</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={currentStep.toString()} className="space-y-6">
-          <TabsList className="bg-white shadow-sm border w-full justify-start">
-            <TabsTrigger value="1" disabled={currentStep < 1}>Course Setup</TabsTrigger>
-            <TabsTrigger value="2" disabled={currentStep < 2}>AI Generation</TabsTrigger>
-            <TabsTrigger value="3" disabled={currentStep < 3}>Review & Approve</TabsTrigger>
-          </TabsList>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex items-center justify-center space-x-8">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                  currentStep >= step 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {currentStep > step ? <CheckCircle className="h-6 w-6" /> : step}
+                </div>
+                <span className={`ml-2 font-medium ${
+                  currentStep >= step ? 'text-indigo-600' : 'text-gray-500'
+                }`}>
+                  {step === 1 ? 'Setup' : step === 2 ? 'Generation' : 'Review & Approve'}
+                </span>
+                {step < 3 && <div className="w-16 h-0.5 bg-gray-300 mx-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
 
-          {/* Step 1: Course Setup */}
-          <TabsContent value="1" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Basic Course Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Course Information
-                  </CardTitle>
-                  <CardDescription>
-                    Provide basic details about your course
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Course Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="Enter course title..."
-                      value={courseData.title}
-                      onChange={(e) => setCourseData(prev => ({ ...prev, title: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Course Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe what this course will cover..."
-                      value={courseData.description}
-                      onChange={(e) => setCourseData(prev => ({ ...prev, description: e.target.value }))}
-                      rows={3}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Agent Selection */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Brain className="h-5 w-5 mr-2" />
-                    Select AI Agents
-                  </CardTitle>
-                  <CardDescription>
-                    Choose which agents will help create your course
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {availableAgents.map((agent) => (
-                    <div key={agent.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            checked={courseData.selectedAgents.includes(agent.id)}
-                            onCheckedChange={() => handleAgentToggle(agent.id)}
-                          />
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <agent.icon className="h-4 w-4 text-indigo-600" />
-                              <span className="font-medium">{agent.name}</span>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-1">{agent.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 ml-6">
-                        {agent.capabilities.map((capability) => (
-                          <Badge key={capability} variant="outline" className="text-xs">
-                            {capability}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Content Sources */}
+        {/* Step 1: Setup */}
+        {currentStep === 1 && (
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Upload className="h-5 w-5 mr-2" />
-                  Content Sources
+                  <Settings className="h-5 w-5 mr-2" />
+                  Course Setup
                 </CardTitle>
                 <CardDescription>
-                  Upload documents or provide links to source materials
+                  Configure your course details and select AI agents to help create the content.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* File Upload */}
-                <div className="space-y-3">
-                  <Label>Upload Documents</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <div className="text-sm">
-                      <label htmlFor="file-upload" className="cursor-pointer text-indigo-600 hover:text-indigo-500">
-                        Click to upload
-                      </label>
-                      <span className="text-gray-500"> or drag and drop</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="courseTitle">Course Title</Label>
+                      <Input
+                        id="courseTitle"
+                        value={courseTitle}
+                        onChange={(e) => setCourseTitle(e.target.value)}
+                        placeholder="Enter course title"
+                        className="mt-1"
+                      />
                     </div>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      multiple
-                      accept=".pdf,.doc,.docx,.txt,.md"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, TXT, MD up to 10MB each</p>
+                    <div>
+                      <Label htmlFor="courseDescription">Course Description</Label>
+                      <Textarea
+                        id="courseDescription"
+                        value={courseDescription}
+                        onChange={(e) => setCourseDescription(e.target.value)}
+                        placeholder="Describe what this course will cover"
+                        className="mt-1 h-32"
+                      />
+                    </div>
                   </div>
                   
-                  {courseData.documents.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Uploaded Files</Label>
-                      {courseData.documents.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <div className="flex items-center space-x-2">
-                            <FileText className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm">{file.name}</span>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Select AI Agents</Label>
+                      <div className="mt-2 space-y-3">
+                        {relevantAgents.length === 0 ? (
+                          <div className="text-center py-6 text-muted-foreground">
+                            <Brain className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                            <p>No active Content Curator or Assessment agents found.</p>
+                            <p className="text-sm">Please configure agents first.</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeDocument(index)}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
+                        ) : (
+                          relevantAgents.map((agent) => (
+                            <div key={agent.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                              <Checkbox
+                                id={agent.id}
+                                checked={selectedAgents.includes(agent.id)}
+                                onCheckedChange={() => handleAgentSelection(agent.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <Label htmlFor={agent.id} className="font-medium cursor-pointer">
+                                  {agent.name}
+                                </Label>
+                                <p className="text-sm text-gray-500 mt-1">{agent.description}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Google Drive Link */}
-                <div className="space-y-2">
-                  <Label htmlFor="drive-link">Google Drive Folder Link</Label>
-                  <div className="flex space-x-2">
-                    <Link2 className="h-4 w-4 text-gray-400 mt-3" />
-                    <Input
-                      id="drive-link"
-                      placeholder="https://drive.google.com/drive/folders/..."
-                      value={courseData.driveLink}
-                      onChange={(e) => setCourseData(prev => ({ ...prev, driveLink: e.target.value }))}
-                    />
                   </div>
-                </div>
-
-                {/* AI Prompt */}
-                <div className="space-y-2">
-                  <Label htmlFor="prompt">Instructions for AI Agents</Label>
-                  <Textarea
-                    id="prompt"
-                    placeholder="Provide specific instructions for how you want the course to be structured, target audience, learning objectives, etc..."
-                    value={courseData.prompt}
-                    onChange={(e) => setCourseData(prev => ({ ...prev, prompt: e.target.value }))}
-                    rows={4}
-                  />
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex justify-end">
-              <Button
-                onClick={() => setCurrentStep(2)}
-                className="bg-indigo-600 hover:bg-indigo-700"
-                disabled={!courseData.title || courseData.selectedAgents.length === 0}
-              >
-                Continue to Generation
-              </Button>
-            </div>
-          </TabsContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Upload className="h-5 w-5 mr-2" />
+                  Course Materials
+                </CardTitle>
+                <CardDescription>
+                  Upload documents or provide links to source materials for course generation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Tabs defaultValue="upload" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="upload">Upload Files</TabsTrigger>
+                    <TabsTrigger value="drive">Google Drive</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="upload" className="space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <div className="space-y-2">
+                        <Label htmlFor="file-upload" className="cursor-pointer">
+                          <span className="text-lg font-medium text-gray-900">Click to upload files</span>
+                          <Input
+                            id="file-upload"
+                            type="file"
+                            multiple
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.txt,.md"
+                          />
+                        </Label>
+                        <p className="text-gray-500">Support: PDF, DOC, DOCX, TXT, MD</p>
+                      </div>
+                    </div>
+                    
+                    {uploadedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Uploaded Files:</Label>
+                        {uploadedFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div className="flex items-center">
+                              <FileText className="h-4 w-4 mr-2" />
+                              <span className="text-sm">{file.name}</span>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={() => removeFile(index)}>
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="drive" className="space-y-4">
+                    <div>
+                      <Label htmlFor="driveLink">Google Drive Folder Link</Label>
+                      <div className="flex space-x-2 mt-1">
+                        <div className="flex-1 relative">
+                          <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="driveLink"
+                            value={googleDriveLink}
+                            onChange={(e) => setGoogleDriveLink(e.target.value)}
+                            placeholder="https://drive.google.com/drive/folders/..."
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
-          {/* Step 2: AI Generation */}
-          <TabsContent value="2" className="space-y-6">
+                <div>
+                  <Label htmlFor="agentPrompt">Instructions for AI Agents</Label>
+                  <Textarea
+                    id="agentPrompt"
+                    value={agentPrompt}
+                    onChange={(e) => setAgentPrompt(e.target.value)}
+                    placeholder="Provide detailed instructions for the AI agents on how to structure and create the course content..."
+                    className="mt-1 h-32"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    disabled={!canProceedToGeneration()}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    Continue to Generation
+                    <PlayCircle className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 2: Generation */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -428,142 +396,174 @@ const CreateCourse = () => {
                   AI Course Generation
                 </CardTitle>
                 <CardDescription>
-                  Review your settings and generate the course content
+                  Your selected agents are working together to create the perfect course.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Generation Summary */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-medium text-blue-900 mb-2">Generation Summary</h3>
-                  <div className="space-y-2 text-sm text-blue-800">
-                    <p><strong>Course:</strong> {courseData.title}</p>
-                    <p><strong>Selected Agents:</strong> {courseData.selectedAgents.length}</p>
-                    <p><strong>Documents:</strong> {courseData.documents.length} files</p>
-                    {courseData.driveLink && <p><strong>Drive Link:</strong> Provided</p>}
-                  </div>
-                </div>
-
-                {isGenerating ? (
-                  <div className="text-center space-y-4">
-                    <div className="inline-flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-                      <span>AI agents are creating your course...</span>
-                    </div>
-                    <Progress value={66} className="w-full max-w-md mx-auto" />
-                    <div className="text-sm text-gray-500 space-y-1">
-                      <p>✓ Content Curator analyzing documents</p>
-                      <p>✓ Structuring learning modules</p>
-                      <p className="text-indigo-600">⟳ Assessment Agent preparing evaluations</p>
+              <CardContent>
+                {!isGenerating ? (
+                  <div className="text-center py-8">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Ready to Generate Your Course</h3>
+                      <div className="flex flex-wrap justify-center gap-2 mb-6">
+                        {selectedAgents.map(agentId => {
+                          const agent = systemAgents.find(a => a.id === agentId);
+                          return agent ? (
+                            <Badge key={agentId} variant="outline" className="bg-indigo-50 text-indigo-700">
+                              {agent.name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                      <Button
+                        onClick={handleGenerateCourse}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="lg"
+                      >
+                        <Zap className="h-5 w-5 mr-2" />
+                        Generate Course with AI
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center">
-                    <Button
-                      onClick={handleGenerateCourse}
-                      size="lg"
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <Brain className="h-5 w-5 mr-2" />
-                      Generate Course with AI
-                    </Button>
+                  <div className="text-center py-8">
+                    <div className="space-y-4">
+                      <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                      <h3 className="text-lg font-medium">Generating Your Course...</h3>
+                      <p className="text-gray-500">AI agents are analyzing your materials and creating structured content.</p>
+                      <div className="max-w-md mx-auto">
+                        <Progress value={66} className="h-2" />
+                        <p className="text-sm text-gray-500 mt-2">Processing documents and generating modules...</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Step 3: Review & Approve */}
-          <TabsContent value="3" className="space-y-6">
-            {generatedCourse && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                        Generated Course Preview
+        {/* Step 3: Review & Approve */}
+        {currentStep === 3 && generatedCourse && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Course Preview
+                </CardTitle>
+                <CardDescription>
+                  Review the generated course and approve it or request modifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-4">
+                      <div>
+                        <h3 className="text-2xl font-bold">{generatedCourse.title}</h3>
+                        <p className="text-gray-600 mt-2">{generatedCourse.description}</p>
                       </div>
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        Ready for Review
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-gray-900">Duration</h3>
-                        <p className="text-2xl font-bold text-indigo-600">{generatedCourse.estimatedDuration}</p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-500">Duration</p>
+                          <p className="font-semibold">{generatedCourse.totalDuration}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-500">Difficulty</p>
+                          <p className="font-semibold">{generatedCourse.difficulty}</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-gray-900">Modules</h3>
-                        <p className="text-2xl font-bold text-indigo-600">{generatedCourse.modules.length}</p>
+
+                      <div>
+                        <h4 className="font-semibold mb-2">Learning Objectives</h4>
+                        <ul className="list-disc list-inside space-y-1 text-gray-600">
+                          {generatedCourse.learningObjectives.map((objective: string, index: number) => (
+                            <li key={index}>{objective}</li>
+                          ))}
+                        </ul>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-medium text-gray-900">Difficulty</h3>
-                        <p className="text-2xl font-bold text-indigo-600">{generatedCourse.difficulty}</p>
+
+                      <div>
+                        <h4 className="font-semibold mb-3">Course Modules</h4>
+                        <div className="space-y-3">
+                          {generatedCourse.modules.map((module: any) => (
+                            <div key={module.id} className="border rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <h5 className="font-medium">{module.title}</h5>
+                                <Badge variant="outline">{module.duration}</Badge>
+                              </div>
+                              <ul className="text-sm text-gray-600 space-y-1">
+                                {module.lessons.map((lesson: string, index: number) => (
+                                  <li key={index}>• {lesson}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <h3 className="font-medium">Course Modules</h3>
-                      {generatedCourse.modules.map((module: any, index: number) => (
-                        <div key={module.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium">{index + 1}. {module.title}</h4>
-                              <p className="text-sm text-gray-500">{module.content}</p>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant="outline">{module.type}</Badge>
-                              <p className="text-sm text-gray-500 mt-1">{module.duration}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {generatedCourse.quiz ? (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h3 className="font-medium text-green-900 mb-2">✓ Assessment Added</h3>
-                        <div className="text-sm text-green-800 space-y-1">
-                          <p>Questions: {generatedCourse.quiz.questions}</p>
-                          <p>Duration: {generatedCourse.quiz.duration}</p>
-                          <p>Passing Score: {generatedCourse.quiz.passingScore}%</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-yellow-900">Add Assessment</h3>
-                            <p className="text-sm text-yellow-800">Generate quizzes and evaluations for this course</p>
-                          </div>
-                          <Button onClick={handleAddQuiz} variant="outline">
-                            <Plus className="h-4 w-4 mr-2" />
+                    <div className="space-y-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <Button
+                            onClick={handleApproveCourse}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve Course
+                          </Button>
+                          <Button
+                            onClick={handleAddQuiz}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
                             Add Quiz
                           </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                          <Button
+                            onClick={() => setCurrentStep(1)}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Modify
+                          </Button>
+                        </CardContent>
+                      </Card>
 
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                    Back to Edit
-                  </Button>
-                  <Button
-                    onClick={handleApproveCourse}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve & Publish Course
-                  </Button>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Course Stats</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Modules:</span>
+                            <span className="font-medium">{generatedCourse.modules.length}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Total Lessons:</span>
+                            <span className="font-medium">
+                              {generatedCourse.modules.reduce((acc: number, mod: any) => acc + mod.lessons.length, 0)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Est. Completion:</span>
+                            <span className="font-medium">{generatedCourse.totalDuration}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
