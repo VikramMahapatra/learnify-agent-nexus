@@ -73,6 +73,10 @@ const AdminDashboard = () => {
     navigate('/create-course');
   };
 
+  const handleAssignCourse = () => {
+    navigate('/assign-course');
+  };
+
   const dummyCourses = [
     { id: 1, title: 'React Fundamentals', students: 45, progress: 78, status: 'active' },
     { id: 2, title: 'Python for Data Science', students: 32, progress: 65, status: 'active' },
@@ -294,10 +298,15 @@ const AdminDashboard = () => {
           <TabsContent value="learners" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Learner Progress</h2>
-              <Button variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Assign Courses
-              </Button>
+              {user.adminRole === 'course-manager' && (
+                <Button 
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  onClick={handleAssignCourse}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Assign Courses
+                </Button>
+              )}
             </div>
             
             <Card>
