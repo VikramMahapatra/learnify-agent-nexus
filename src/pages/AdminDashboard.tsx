@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Users, BookOpen, Brain, TrendingUp, PlusCircle, 
   Settings, LogOut, Award, BarChart3, Clock, 
-  CheckCircle, AlertCircle, Star, Edit, UserPlus
+  CheckCircle, AlertCircle, Star, Edit, UserPlus, Search
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ConfigureAgentsDialog from '@/components/ConfigureAgentsDialog';
@@ -32,9 +34,21 @@ interface Agent {
   efficiency?: number;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  lastLogin: string;
+}
+
 const AdminDashboard = () => {
   const [user, setUser] = useState<UserData | null>(null);
   const [systemAgents, setSystemAgents] = useState<Agent[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,6 +103,20 @@ const AdminDashboard = () => {
     navigate('/assign-course');
   };
 
+  const handleEditUser = (userId: number) => {
+    toast({
+      title: "Edit User",
+      description: `Editing user with ID ${userId}. This would open the user edit form.`,
+    });
+  };
+
+  const handleUserSettings = (userId: number) => {
+    toast({
+      title: "User Settings",
+      description: `Opening settings for user with ID ${userId}.`,
+    });
+  };
+
   const dummyCourses = [
     { id: 1, title: 'React Fundamentals', students: 45, progress: 78, status: 'active' },
     { id: 2, title: 'Python for Data Science', students: 32, progress: 65, status: 'active' },
@@ -101,12 +129,28 @@ const AdminDashboard = () => {
     { id: 3, name: 'Mike Johnson', course: 'UI/UX Design Principles', progress: 95, score: 95 },
   ];
 
-  const dummyUsers = [
+  const dummyUsers: User[] = [
     { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-10' },
     { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-09' },
     { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-05' },
     { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-11' },
+    { id: 5, name: 'David Brown', email: 'david@example.com', role: 'Admin', status: 'Active', lastLogin: '2024-06-12' },
+    { id: 6, name: 'Emily Davis', email: 'emily@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-08' },
   ];
+
+  // Filter users based on search term and filters
+  const filteredUsers = dummyUsers.filter(user => {
+    const matchesSearch = searchTerm === '' || 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.status.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || user.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesRole = roleFilter === 'all' || user.role.toLowerCase() === roleFilter.toLowerCase();
+    
+    return matchesSearch && matchesStatus && matchesRole;
+  });
 
   const isLearnerManager = user?.adminRole === 'Learner Manager';
 
@@ -406,6 +450,52 @@ const AdminDashboard = () => {
               </Button>
             </div>
             
+            {/* Search and Filter Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Search className="h-5 w-5 mr-2" />
+                  Search & Filter Users
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <Input
+                      placeholder="Search by name, email, role, or status..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="learner">Learner</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -421,7 +511,7 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {dummyUsers.map((user) => (
+                      {filteredUsers.map((user) => (
                         <tr key={user.id} className="border-b hover:bg-gray-50">
                           <td className="p-4">
                             <div className="flex items-center">
@@ -443,10 +533,18 @@ const AdminDashboard = () => {
                           <td className="p-4">{user.lastLogin}</td>
                           <td className="p-4">
                             <div className="flex space-x-2">
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleEditUser(user.id)}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleUserSettings(user.id)}
+                              >
                                 <Settings className="h-4 w-4" />
                               </Button>
                             </div>
@@ -456,6 +554,11 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No users found matching your search criteria.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
