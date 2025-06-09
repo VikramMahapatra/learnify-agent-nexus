@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, BookOpen, Brain, TrendingUp, PlusCircle, 
   Settings, LogOut, Award, BarChart3, Clock, 
-  CheckCircle, AlertCircle, Star 
+  CheckCircle, AlertCircle, Star, Edit, UserPlus
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ConfigureAgentsDialog from '@/components/ConfigureAgentsDialog';
@@ -78,6 +78,17 @@ const AdminDashboard = () => {
     navigate('/assign-course');
   };
 
+  const handleEditCourse = (courseId: number) => {
+    toast({
+      title: "Edit Course",
+      description: `Editing course ${courseId}. This would open the course editor.`,
+    });
+  };
+
+  const handleAssignCourseFromList = (courseId: number) => {
+    navigate('/assign-course');
+  };
+
   const dummyCourses = [
     { id: 1, title: 'React Fundamentals', students: 45, progress: 78, status: 'active' },
     { id: 2, title: 'Python for Data Science', students: 32, progress: 65, status: 'active' },
@@ -88,6 +99,13 @@ const AdminDashboard = () => {
     { id: 1, name: 'John Doe', course: 'React Fundamentals', progress: 85, score: 92 },
     { id: 2, name: 'Jane Smith', course: 'Python for Data Science', progress: 60, score: 88 },
     { id: 3, name: 'Mike Johnson', course: 'UI/UX Design Principles', progress: 95, score: 95 },
+  ];
+
+  const dummyUsers = [
+    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-10' },
+    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-09' },
+    { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-05' },
+    { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-11' },
   ];
 
   const isLearnerManager = user?.adminRole === 'Learner Manager';
@@ -284,11 +302,21 @@ const AdminDashboard = () => {
                         <Progress value={course.progress} className="h-2" />
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleEditCourse(course.id)}
+                        >
                           <Settings className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleAssignCourseFromList(course.id)}
+                        >
                           <Users className="h-4 w-4 mr-1" />
                           Assign
                         </Button>
@@ -356,6 +384,72 @@ const AdminDashboard = () => {
                             ) : (
                               <Clock className="h-5 w-5 text-yellow-500" />
                             )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">User Management</h2>
+              <Button 
+                className="bg-indigo-600 hover:bg-indigo-700"
+                onClick={() => toast({ title: "Add User", description: "User creation form would open here." })}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </div>
+            
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left p-4 font-medium">Name</th>
+                        <th className="text-left p-4 font-medium">Email</th>
+                        <th className="text-left p-4 font-medium">Role</th>
+                        <th className="text-left p-4 font-medium">Status</th>
+                        <th className="text-left p-4 font-medium">Last Login</th>
+                        <th className="text-left p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dummyUsers.map((user) => (
+                        <tr key={user.id} className="border-b hover:bg-gray-50">
+                          <td className="p-4">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                {user.name.charAt(0)}
+                              </div>
+                              {user.name}
+                            </div>
+                          </td>
+                          <td className="p-4">{user.email}</td>
+                          <td className="p-4">
+                            <Badge variant="outline">{user.role}</Badge>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
+                              {user.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4">{user.lastLogin}</td>
+                          <td className="p-4">
+                            <div className="flex space-x-2">
+                              <Button size="sm" variant="outline">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
