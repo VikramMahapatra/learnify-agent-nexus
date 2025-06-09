@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +6,11 @@ import {
   GraduationCap, Brain, Users, BookOpen, TrendingUp, 
   Zap, Target, Award, ArrowRight, ChevronRight 
 } from 'lucide-react';
+import LearnMoreModal from '@/components/LearnMoreModal';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [showLearnMore, setShowLearnMore] = useState(false);
 
   const features = [
     {
@@ -82,6 +83,7 @@ const Index = () => {
                 size="lg" 
                 variant="outline" 
                 className="text-lg px-8 py-6 border-indigo-200 hover:bg-indigo-50"
+                onClick={() => setShowLearnMore(true)}
               >
                 Learn More
                 <ChevronRight className="ml-2 h-5 w-5" />
@@ -189,6 +191,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      <LearnMoreModal open={showLearnMore} onOpenChange={setShowLearnMore} />
     </div>
   );
 };

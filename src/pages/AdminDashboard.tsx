@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import ConfigureAgentsDialog from '@/components/ConfigureAgentsDialog';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 
 interface UserData {
   email: string;
@@ -88,6 +89,8 @@ const AdminDashboard = () => {
     { id: 2, name: 'Jane Smith', course: 'Python for Data Science', progress: 60, score: 88 },
     { id: 3, name: 'Mike Johnson', course: 'UI/UX Design Principles', progress: 95, score: 95 },
   ];
+
+  const isLearnerManager = user?.role === 'Learner Manager';
 
   if (!user) return null;
 
@@ -182,12 +185,14 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue={isLearnerManager ? "analytics" : "overview"} className="space-y-6">
           <TabsList className="bg-white shadow-sm border">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="learners">Learners</TabsTrigger>
-            <TabsTrigger value="agents">AI Agents</TabsTrigger>
+            {!isLearnerManager && <TabsTrigger value="overview">Overview</TabsTrigger>}
+            {!isLearnerManager && <TabsTrigger value="users">User Management</TabsTrigger>}
+            {!isLearnerManager && <TabsTrigger value="courses">Course Management</TabsTrigger>}
+            {!isLearnerManager && <TabsTrigger value="agents">AI Agents</TabsTrigger>}
+            {isLearnerManager && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+            {isLearnerManager && <TabsTrigger value="overview">Overview</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -422,6 +427,12 @@ const AdminDashboard = () => {
               )}
             </div>
           </TabsContent>
+
+          {isLearnerManager && (
+            <TabsContent value="analytics">
+              <AnalyticsDashboard />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

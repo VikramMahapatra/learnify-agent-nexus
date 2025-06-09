@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   Users, BookOpen, Brain, ArrowLeft, Search, 
-  Plus, CheckCircle, Clock, User 
+  Plus, CheckCircle, Clock, User, Target 
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Learner {
   id: number;
@@ -47,6 +48,14 @@ const AssignCourse = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [availableCourses, setAvailableCourses] = useState<AvailableCourse[]>([]);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [newGoal, setNewGoal] = useState({
+    title: '',
+    description: '',
+    targetHours: '',
+    timeframe: 'weekly' as const,
+    period: ''
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -198,6 +207,35 @@ const AssignCourse = () => {
     return availableCourses.filter(course => !enrolledCourseIds.includes(course.id));
   };
 
+  const handleSetLearningGoal = () => {
+    if (!selectedLearner || !newGoal.title || !newGoal.targetHours || !newGoal.period) return;
+
+    const goal = {
+      id: Date.now().toString(),
+      title: newGoal.title,
+      description: newGoal.description,
+      targetHours: parseInt(newGoal.targetHours),
+      completedHours: 0,
+      timeframe: newGoal.timeframe,
+      period: newGoal.period,
+      type: 'admin' as const,
+      assignedBy: 'Course Manager - John Smith',
+      status: 'active' as const,
+      learnerId: selectedLearner.id
+    };
+
+    // Save to localStorage (in real app, this would be an API call)
+    const existingGoals = JSON.parse(localStorage.getItem('skillforge_learning_goals') || '[]');
+    const updatedGoals = [...existingGoals, goal];
+    localStorage.setItem('skillforge_learning_goals', JSON.stringify(updatedGoals));
+
+    setNewGoal({ title: '', description: '', targetHours: '', timeframe: 'weekly', period: '' });
+    setShowGoalDialog(false);
+    
+    // Show success message
+    alert(`Learning goal "${goal.title}" has been set for ${selectedLearner.name}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
@@ -324,6 +362,79 @@ const AssignCourse = () => {
                               </div>
                             </div>
                           ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog open={showGoalDialog} onOpenChange={setShowGoalDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <Target className="h-4 w-4 mr-2" />
+                          Set Learning Goal
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Set Learning Goal for {selectedLearner.name}</DialogTitle>
+                          <DialogDescription>Create a learning target for this learner</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="goalTitle">Goal Title</Label>
+                            <Input
+                              id="goalTitle"
+                              value={newGoal.title}
+                              onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
+                              placeholder="e.g., Complete React Course"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="goalDescription">Description</Label>
+                            <Textarea
+                              id="goalDescription"
+                              value={newGoal.description}
+                              onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
+                              placeholder="Optional description of the learning goal"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="goalHours">Target Hours</Label>
+                              <Input
+                                id="goalHours"
+                                type="number"
+                                value={newGoal.targetHours}
+                                onChange={(e) => setNewGoal({...newGoal, targetHours: e.target.value})}
+                                placeholder="15"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="goalTimeframe">Timeframe</Label>
+                              <Select value={newGoal.timeframe} onValueChange={(value: any) => setNewGoal({...newGoal, timeframe: value})}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="daily">Daily</SelectItem>
+                                  <SelectItem value="weekly">Weekly</SelectItem>
+                                  <SelectItem value="monthly">Monthly</SelectItem>
+                                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                                  <SelectItem value="yearly">Yearly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="goalPeriod">Period</Label>
+                            <Input
+                              id="goalPeriod"
+                              value={newGoal.period}
+                              onChange={(e) => setNewGoal({...newGoal, period: e.target.value})}
+                              placeholder="e.g., 2024-W25, 2024-06, 2024-Q2"
+                            />
+                          </div>
+                          <Button onClick={handleSetLearningGoal} className="w-full">
+                            Set Learning Goal
+                          </Button>
                         </div>
                       </DialogContent>
                     </Dialog>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import {
   Star, TrendingUp, MessageCircle, LogOut, Search,
   Filter, Award, Target, Users, BookMarked
 } from 'lucide-react';
+import LearningGoals from '@/components/LearningGoals';
 
 interface UserData {
   email: string;
@@ -196,6 +196,7 @@ const LearnerDashboard = () => {
           <TabsList className="bg-white shadow-sm border">
             <TabsTrigger value="assigned">Assigned Courses</TabsTrigger>
             <TabsTrigger value="explore">Explore Courses</TabsTrigger>
+            <TabsTrigger value="goals">Learning Goals</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
             <TabsTrigger value="ai-assistant">AI Assistant</TabsTrigger>
           </TabsList>
@@ -306,6 +307,10 @@ const LearnerDashboard = () => {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="goals">
+            <LearningGoals />
           </TabsContent>
 
           <TabsContent value="progress" className="space-y-6">
