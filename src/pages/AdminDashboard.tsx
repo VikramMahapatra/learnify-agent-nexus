@@ -90,7 +90,7 @@ const AdminDashboard = () => {
     { id: 3, name: 'Mike Johnson', course: 'UI/UX Design Principles', progress: 95, score: 95 },
   ];
 
-  const isLearnerManager = user?.role === 'Learner Manager';
+  const isLearnerManager = user?.adminRole === 'Learner Manager';
 
   if (!user) return null;
 

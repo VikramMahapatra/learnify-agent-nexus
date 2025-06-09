@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 import { 
   Users, BookOpen, Brain, ArrowLeft, Search, 
   Plus, CheckCircle, Clock, User, Target 
@@ -325,119 +326,121 @@ const AssignCourse = () => {
                       </CardTitle>
                       <CardDescription>{selectedLearner.email}</CardDescription>
                     </div>
-                    <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-indigo-600 hover:bg-indigo-700">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Assign Course
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Assign Course to {selectedLearner.name}</DialogTitle>
-                          <DialogDescription>
-                            Select a course to assign to this learner
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 max-h-96 overflow-y-auto">
-                          {getAvailableCoursesForLearner().map((course) => (
-                            <div key={course.id} className="p-4 border rounded-lg">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <h3 className="font-medium">{course.title}</h3>
-                                  <p className="text-sm text-gray-500 mt-1">{course.description}</p>
-                                  <div className="flex items-center gap-4 mt-2">
-                                    <Badge variant="outline">{course.difficulty}</Badge>
-                                    <span className="text-sm text-gray-500">{course.duration}</span>
-                                    <span className="text-sm text-gray-500">{course.category}</span>
+                    <div className="flex gap-2">
+                      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="bg-indigo-600 hover:bg-indigo-700">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Assign Course
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Assign Course to {selectedLearner.name}</DialogTitle>
+                            <DialogDescription>
+                              Select a course to assign to this learner
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 max-h-96 overflow-y-auto">
+                            {getAvailableCoursesForLearner().map((course) => (
+                              <div key={course.id} className="p-4 border rounded-lg">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <h3 className="font-medium">{course.title}</h3>
+                                    <p className="text-sm text-gray-500 mt-1">{course.description}</p>
+                                    <div className="flex items-center gap-4 mt-2">
+                                      <Badge variant="outline">{course.difficulty}</Badge>
+                                      <span className="text-sm text-gray-500">{course.duration}</span>
+                                      <span className="text-sm text-gray-500">{course.category}</span>
+                                    </div>
                                   </div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAssignCourse(course.id)}
+                                    className="ml-4"
+                                  >
+                                    Assign
+                                  </Button>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleAssignCourse(course.id)}
-                                  className="ml-4"
-                                >
-                                  Assign
-                                </Button>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog open={showGoalDialog} onOpenChange={setShowGoalDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <Target className="h-4 w-4 mr-2" />
-                          Set Learning Goal
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Set Learning Goal for {selectedLearner.name}</DialogTitle>
-                          <DialogDescription>Create a learning target for this learner</DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="goalTitle">Goal Title</Label>
-                            <Input
-                              id="goalTitle"
-                              value={newGoal.title}
-                              onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
-                              placeholder="e.g., Complete React Course"
-                            />
+                            ))}
                           </div>
-                          <div>
-                            <Label htmlFor="goalDescription">Description</Label>
-                            <Textarea
-                              id="goalDescription"
-                              value={newGoal.description}
-                              onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
-                              placeholder="Optional description of the learning goal"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog open={showGoalDialog} onOpenChange={setShowGoalDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline">
+                            <Target className="h-4 w-4 mr-2" />
+                            Set Learning Goal
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Set Learning Goal for {selectedLearner.name}</DialogTitle>
+                            <DialogDescription>Create a learning target for this learner</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
                             <div>
-                              <Label htmlFor="goalHours">Target Hours</Label>
+                              <Label htmlFor="goalTitle">Goal Title</Label>
                               <Input
-                                id="goalHours"
-                                type="number"
-                                value={newGoal.targetHours}
-                                onChange={(e) => setNewGoal({...newGoal, targetHours: e.target.value})}
-                                placeholder="15"
+                                id="goalTitle"
+                                value={newGoal.title}
+                                onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
+                                placeholder="e.g., Complete React Course"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="goalTimeframe">Timeframe</Label>
-                              <Select value={newGoal.timeframe} onValueChange={(value: any) => setNewGoal({...newGoal, timeframe: value})}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="daily">Daily</SelectItem>
-                                  <SelectItem value="weekly">Weekly</SelectItem>
-                                  <SelectItem value="monthly">Monthly</SelectItem>
-                                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                                  <SelectItem value="yearly">Yearly</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <Label htmlFor="goalDescription">Description</Label>
+                              <Textarea
+                                id="goalDescription"
+                                value={newGoal.description}
+                                onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
+                                placeholder="Optional description of the learning goal"
+                              />
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="goalHours">Target Hours</Label>
+                                <Input
+                                  id="goalHours"
+                                  type="number"
+                                  value={newGoal.targetHours}
+                                  onChange={(e) => setNewGoal({...newGoal, targetHours: e.target.value})}
+                                  placeholder="15"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="goalTimeframe">Timeframe</Label>
+                                <Select value={newGoal.timeframe} onValueChange={(value: any) => setNewGoal({...newGoal, timeframe: value})}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Daily</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor="goalPeriod">Period</Label>
+                              <Input
+                                id="goalPeriod"
+                                value={newGoal.period}
+                                onChange={(e) => setNewGoal({...newGoal, period: e.target.value})}
+                                placeholder="e.g., 2024-W25, 2024-06, 2024-Q2"
+                              />
+                            </div>
+                            <Button onClick={handleSetLearningGoal} className="w-full">
+                              Set Learning Goal
+                            </Button>
                           </div>
-                          <div>
-                            <Label htmlFor="goalPeriod">Period</Label>
-                            <Input
-                              id="goalPeriod"
-                              value={newGoal.period}
-                              onChange={(e) => setNewGoal({...newGoal, period: e.target.value})}
-                              placeholder="e.g., 2024-W25, 2024-06, 2024-Q2"
-                            />
-                          </div>
-                          <Button onClick={handleSetLearningGoal} className="w-full">
-                            Set Learning Goal
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
