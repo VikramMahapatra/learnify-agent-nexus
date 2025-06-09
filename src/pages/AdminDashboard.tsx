@@ -15,6 +15,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import ConfigureAgentsDialog from '@/components/ConfigureAgentsDialog';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import UserForm from '@/components/UserForm';
 
 interface UserData {
   email: string;
@@ -41,6 +42,9 @@ interface User {
   role: string;
   status: string;
   lastLogin: string;
+  dept?: string;
+  subDept?: string;
+  username?: string;
 }
 
 const AdminDashboard = () => {
@@ -49,6 +53,9 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,6 +73,8 @@ const AdminDashboard = () => {
 
     // Load system agents
     loadSystemAgents();
+    // Load users from localStorage or initialize with dummy data
+    loadUsers();
   }, [navigate]);
 
   const loadSystemAgents = () => {
@@ -73,6 +82,22 @@ const AdminDashboard = () => {
     if (savedAgents) {
       setSystemAgents(JSON.parse(savedAgents));
     }
+  };
+
+  const loadUsers = () => {
+    const savedUsers = localStorage.getItem('skillforge_users');
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
+    } else {
+      // Initialize with dummy data
+      setUsers(dummyUsers);
+      localStorage.setItem('skillforge_users', JSON.stringify(dummyUsers));
+    }
+  };
+
+  const saveUsers = (updatedUsers: User[]) => {
+    setUsers(updatedUsers);
+    localStorage.setItem('skillforge_users', JSON.stringify(updatedUsers));
   };
 
   const handleAgentsUpdate = (agents: Agent[]) => {
@@ -104,10 +129,11 @@ const AdminDashboard = () => {
   };
 
   const handleEditUser = (userId: number) => {
-    toast({
-      title: "Edit User",
-      description: `Editing user with ID ${userId}. This would open the user edit form.`,
-    });
+    const userToEdit = users.find(u => u.id === userId);
+    if (userToEdit) {
+      setEditingUser(userToEdit);
+      setShowUserForm(true);
+    }
   };
 
   const handleUserSettings = (userId: number) => {
@@ -115,6 +141,23 @@ const AdminDashboard = () => {
       title: "User Settings",
       description: `Opening settings for user with ID ${userId}.`,
     });
+  };
+
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setShowUserForm(true);
+  };
+
+  const handleUserSaved = (userData: User) => {
+    if (editingUser) {
+      // Update existing user
+      const updatedUsers = users.map(u => u.id === userData.id ? userData : u);
+      saveUsers(updatedUsers);
+    } else {
+      // Add new user
+      const newUsers = [...users, userData];
+      saveUsers(newUsers);
+    }
   };
 
   const dummyCourses = [
@@ -130,21 +173,23 @@ const AdminDashboard = () => {
   ];
 
   const dummyUsers: User[] = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-10' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-09' },
-    { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-05' },
-    { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-11' },
-    { id: 5, name: 'David Brown', email: 'david@example.com', role: 'Admin', status: 'Active', lastLogin: '2024-06-12' },
-    { id: 6, name: 'Emily Davis', email: 'emily@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-08' },
+    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-10', dept: 'Engineering', subDept: 'Software', username: 'john.doe' },
+    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-09', dept: 'Marketing', subDept: 'Digital', username: 'jane.smith' },
+    { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-05', dept: 'Sales', subDept: 'B2B', username: 'mike.johnson' },
+    { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Learner', status: 'Active', lastLogin: '2024-06-11', dept: 'HR', subDept: 'Recruitment', username: 'sarah.wilson' },
+    { id: 5, name: 'David Brown', email: 'david@example.com', role: 'Admin', status: 'Active', lastLogin: '2024-06-12', dept: 'IT', subDept: 'Security', username: 'david.brown' },
+    { id: 6, name: 'Emily Davis', email: 'emily@example.com', role: 'Learner', status: 'Inactive', lastLogin: '2024-06-08', dept: 'Finance', subDept: 'Accounting', username: 'emily.davis' },
   ];
 
   // Filter users based on search term and filters
-  const filteredUsers = dummyUsers.filter(user => {
+  const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.status.toLowerCase().includes(searchTerm.toLowerCase());
+      user.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.dept && user.dept.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.subDept && user.subDept.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || user.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesRole = roleFilter === 'all' || user.role.toLowerCase() === roleFilter.toLowerCase();
@@ -443,7 +488,7 @@ const AdminDashboard = () => {
               <h2 className="text-2xl font-bold">User Management</h2>
               <Button 
                 className="bg-indigo-600 hover:bg-indigo-700"
-                onClick={() => toast({ title: "Add User", description: "User creation form would open here." })}
+                onClick={handleAddUser}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
@@ -462,7 +507,7 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
                     <Input
-                      placeholder="Search by name, email, role, or status..."
+                      placeholder="Search by name, email, role, status, department..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full"
@@ -504,6 +549,7 @@ const AdminDashboard = () => {
                       <tr>
                         <th className="text-left p-4 font-medium">Name</th>
                         <th className="text-left p-4 font-medium">Email</th>
+                        <th className="text-left p-4 font-medium">Department</th>
                         <th className="text-left p-4 font-medium">Role</th>
                         <th className="text-left p-4 font-medium">Status</th>
                         <th className="text-left p-4 font-medium">Last Login</th>
@@ -518,10 +564,21 @@ const AdminDashboard = () => {
                               <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
                                 {user.name.charAt(0)}
                               </div>
-                              {user.name}
+                              <div>
+                                <div className="font-medium">{user.name}</div>
+                                {user.username && (
+                                  <div className="text-sm text-gray-500">@{user.username}</div>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td className="p-4">{user.email}</td>
+                          <td className="p-4">
+                            <div>
+                              {user.dept && <div className="font-medium">{user.dept}</div>}
+                              {user.subDept && <div className="text-sm text-gray-500">{user.subDept}</div>}
+                            </div>
+                          </td>
                           <td className="p-4">
                             <Badge variant="outline">{user.role}</Badge>
                           </td>
@@ -632,6 +689,13 @@ const AdminDashboard = () => {
           )}
         </Tabs>
       </div>
+
+      <UserForm
+        open={showUserForm}
+        onOpenChange={setShowUserForm}
+        user={editingUser}
+        onUserSaved={handleUserSaved}
+      />
     </div>
   );
 };
